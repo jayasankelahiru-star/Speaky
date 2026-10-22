@@ -1,0 +1,31 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Build
+        run: |
+          cp pubspec.yaml /tmp/pubspec.yaml
+          cp main.dart /tmp/main.dart
+          flutter create --platforms=android --project-name speakup --org com.speakup .
+          cp /tmp/pubspec.yaml pubspec.yaml
+          cp /tmp/main.dart lib/main.dart
+          rm -rf test
+          sed -i 's#<application#<uses-permission android:name="android.permission.RECORD_AUDIO"/><uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.BLUETOOTH"/><uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/><queries><intent><action android:name="android.speech.RecognitionService"/></intent></queries><application#' android/app/src/main/AndroidManifest.xml
+          flutter pub get
+          flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: speakup-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
